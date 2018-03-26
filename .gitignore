@@ -1,0 +1,8 @@
+# Godot
+.import/
+logs/
+
+# Misc
+debug.bat
+_draft/
+_old/

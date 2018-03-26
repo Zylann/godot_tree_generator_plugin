@@ -1,0 +1,71 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://addons/zylann.treegen/tree.gd" type="Script" id=1]
+[ext_resource path="res://addons/zylann.treegen/tools/icons/icon_tree_node.svg" type="Texture" id=2]
+
+[node name="Node" type="Node" index="0"]
+
+[node name="Camera" type="Camera" parent="." index="0"]
+
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.97584, 22.4684 )
+keep_aspect = 1
+cull_mask = 1048575
+environment = null
+h_offset = 0.0
+v_offset = 0.0
+doppler_tracking = 0
+projection = 0
+current = false
+fov = 70.0
+size = 1.0
+near = 0.05
+far = 100.0
+
+[node name="DirectionalLight" type="DirectionalLight" parent="." index="1"]
+
+transform = Transform( 0.833785, -0.437825, 0.336322, 0, 0.609181, 0.793031, -0.55209, -0.661217, 0.507926, 18.3856, 0, 21.0802 )
+layers = 1
+light_color = Color( 1, 1, 1, 1 )
+light_energy = 1.0
+light_indirect_energy = 1.0
+light_negative = false
+light_specular = 0.5
+light_bake_mode = 1
+light_cull_mask = -1
+shadow_enabled = false
+shadow_color = Color( 0, 0, 0, 1 )
+shadow_bias = 0.1
+shadow_contact = 0.0
+shadow_reverse_cull_face = false
+editor_only = false
+directional_shadow_mode = 2
+directional_shadow_split_1 = 0.1
+directional_shadow_split_2 = 0.2
+directional_shadow_split_3 = 0.5
+directional_shadow_blend_splits = false
+directional_shadow_normal_bias = 0.8
+directional_shadow_bias_split_scale = 0.25
+directional_shadow_depth_range = 0
+directional_shadow_max_distance = 200.0
+
+[node name="TreeMesh" type="Spatial" parent="." index="2"]
+
+script = ExtResource( 1 )
+__meta__ = {
+"_editor_icon": ExtResource( 2 )
+}
+random_seed = 131183
+step_distance = 2.0
+curviness = 0.2
+max_length = 30.0
+begin_radius = 1.0
+end_radius = 0.1
+cylinder_points = 5
+branch_interval = 3.0
+branch_interval_randomness = 0.0
+branch_direction_randomness = 0.2
+branch_start_margin = 3.0
+branch_end_margin = 3.0
+branch_material = null
+
+
