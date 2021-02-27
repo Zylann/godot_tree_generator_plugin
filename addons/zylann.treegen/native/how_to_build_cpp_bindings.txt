@@ -1,0 +1,2 @@
+cd godot-cpp
+scons platform=windows generate_bindings=yes custom_api_file="../api_v3.2.3.json" target=release -j3

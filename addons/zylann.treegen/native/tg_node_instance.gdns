@@ -1,0 +1,8 @@
+[gd_resource type="NativeScript" load_steps=2 format=2]
+
+[ext_resource path="res://addons/zylann.treegen/native/treegen.gdnlib" type="GDNativeLibrary" id=1]
+
+[resource]
+resource_name = "tg_node_instance"
+class_name = "TG_NodeInstance"
+library = ExtResource( 1 )

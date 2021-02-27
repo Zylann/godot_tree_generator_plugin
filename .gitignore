@@ -6,3 +6,19 @@ logs/
 debug.bat
 _draft/
 _old/
+
+# C++ build
+*.exp
+*.ilk
+*.lib
+*.pdb
+#*.dll
+*.idb
+addons/zylann.treegen/native/src/*.obj
+
+# SCons
+*.dblite
+
+# VSCode
+*.vs/
+.vscode/
