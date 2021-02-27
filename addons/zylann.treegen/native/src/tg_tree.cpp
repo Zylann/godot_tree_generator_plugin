@@ -39,7 +39,7 @@ static godot::Transform interpolate_path(const std::vector<godot::Transform> tra
 	}
 
 	for (size_t i = 0; i < distances.size(); ++i) {
-		if (distances[i] > offset) {
+		if (distances[i] < offset) {
 			continue;
 		}
 		TG_CRASH_COND(i <= 0);
