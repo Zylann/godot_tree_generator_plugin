@@ -286,6 +286,8 @@ static func connect_rings_with_different_point_count(indices: Array, prev_ring_b
 	var src_i := prev_ring_begin
 	var dst_i := next_ring_begin
 	
+	var added_indices_begin = len(indices)
+	
 	for i in prev_point_count:
 		var prev_src_i := src_i
 		src_i += 1
@@ -306,7 +308,7 @@ static func connect_rings_with_different_point_count(indices: Array, prev_ring_b
 			indices.append(dst_i)
 	
 	if flip_winding:
-		for i in range(0, len(indices), 3):
+		for i in range(added_indices_begin, len(indices), 3):
 			var temp = indices[i]
 			indices[i] = indices[i + 1]
 			indices[i + 1] = temp
