@@ -158,6 +158,10 @@ public:
 		_children.push_back(node);
 	}
 
+	void clear_children() {
+		_children.clear();
+	}
+
 	// Internal
 
 	const TG_SpawnParams &get_spawn_params() const {
@@ -180,9 +184,13 @@ public:
 		godot::register_method("get_spawn_params", &TG_Node::_b_get_spawn_params);
 		godot::register_method("get_path_params", &TG_Node::_b_get_path_params);
 
+		godot::register_method("get_local_seed", &TG_Node::get_local_seed);
+		godot::register_method("set_local_seed", &TG_Node::set_local_seed);
+
 		godot::register_method("get_child_count", &TG_Node::get_child_count);
 		godot::register_method("get_child", &TG_Node::_b_get_child);
 		godot::register_method("add_child", &TG_Node::add_child);
+		godot::register_method("clear_children", &TG_Node::clear_children);
 	}
 
 private:

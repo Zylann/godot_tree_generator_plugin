@@ -1,9 +1,9 @@
 tool
 extends Spatial
 
-const TG_Tree = preload("./core/tg_tree.gd")
-const TG_Node = preload("./core/tg_node.gd")
-const TG_NodeInstance = preload("./core/tg_node_instance.gd")
+const TG_Tree = preload("./native/tg_tree.gdns")
+const TG_Node = preload("./native/tg_node.gdns")
+const TG_NodeInstance = preload("./native/tg_node_instance.gdns")
 const TreeGenNode = preload("./treegen_node.gd")
 
 const AxesScene = preload("./axes.tscn")
@@ -27,7 +27,7 @@ var _parsing_scheduled = false
 
 func set_global_seed(new_seed: int):
 	global_seed = new_seed
-	_generator.global_seed = new_seed
+	_generator.set_global_seed(new_seed)
 	if is_inside_tree():
 		generate()
 
@@ -35,7 +35,7 @@ func set_global_seed(new_seed: int):
 func set_mesh_divisions_per_unit(v: float):
 	v = max(v, 0.0)
 	mesh_divisions_per_unit = v
-	_generator.mesh_divisions_per_unit = v
+	_generator.set_mesh_divisions_per_unit(v)
 	if is_inside_tree():
 		generate()
 
@@ -43,7 +43,7 @@ func set_mesh_divisions_per_unit(v: float):
 func set_branch_segments_per_unit(v: float):
 	v = max(v, 0.0)
 	branch_segments_per_unit = v
-	_generator.branch_segments_per_unit = v
+	_generator.set_branch_segments_per_unit(v)
 	if is_inside_tree():
 		generate()
 
@@ -52,19 +52,32 @@ func generate():
 	for node in _nodes:
 		node.queue_free()
 	_nodes.clear()
+	
+	var time_before = OS.get_ticks_msec()
 	_generator.generate()
-	_make_mesh_instances(_generator.root_instance, Transform())
+	var elapsed_gen = OS.get_ticks_msec() - time_before
+	
+	time_before = OS.get_ticks_msec()
+	_make_mesh_instances(_generator.get_root_node_instance(), Transform())
+	var elapsed_mesh = OS.get_ticks_msec() - time_before
+	
+	print("Gen: ", elapsed_gen, ", mesh: ", elapsed_mesh)
 
 
-func _make_mesh_instances(node_instance: TG_NodeInstance, base_transform: Transform):
+func _make_mesh_instances(node_instance, base_transform: Transform):
+	var surfaces = node_instance.get_surfaces()
+	var mesh = ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surfaces)
+
 	var mi = MeshInstance.new()
-	mi.mesh = node_instance.mesh
-	mi.transform = base_transform * node_instance.transform
+	mi.mesh = mesh
+	mi.transform = base_transform * node_instance.local_transform
 	add_child(mi)
 	_nodes.append(mi)
 	#_debug_axes(node_instance.path)
 
-	for child in node_instance.children:
+	for i in node_instance.get_child_count():
+		var child = node_instance.get_child(i)
 		_make_mesh_instances(child, mi.transform)
 
 
@@ -80,13 +93,13 @@ func _parse_scene_nodes():
 		# WTF are you doing
 		return
 	
-	var root : TG_Node
+	var root
 	for child in get_children():
 		if child is TreeGenNode:
 			# Root
 			root = child.get_tg_node()
 			_parse_scene_nodes_recursive(child)
-			_generator.root_node = root
+			_generator.set_root_node(root)
 			break
 
 	generate()
@@ -97,12 +110,12 @@ func _parse_scene_nodes_recursive(scene_node: TreeGenNode):
 	var tg_node = scene_node.get_tg_node()
 	if tg_node == null:
 		return
-	tg_node.children.clear()
+	tg_node.clear_children()
 	for child_scene_node in scene_node.get_children():
 		if child_scene_node is TreeGenNode:
 			var child_tg_node = child_scene_node.get_tg_node()
 			if child_tg_node != null:
-				tg_node.children.append(child_tg_node)
+				tg_node.add_child(child_tg_node)
 				_parse_scene_nodes_recursive(child_scene_node)
 
 

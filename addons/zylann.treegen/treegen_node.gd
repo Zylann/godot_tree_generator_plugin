@@ -3,7 +3,7 @@ extends Node
 
 # Using `var` instead of `const` because otherwise it creates a cyclic dependency
 var TreeGenTree = load("res://addons/zylann.treegen/treegen_tree.gd")
-const TG_Node = preload("./core/tg_node.gd")
+const TG_Node = preload("./native/tg_node.gdns")
 
 
 var _data := TG_Node.new()
@@ -44,6 +44,6 @@ func _notification(what: int):
 			_tree = null
 
 
-func get_tg_node() -> TG_Node:
+func get_tg_node():
 	return _data
 

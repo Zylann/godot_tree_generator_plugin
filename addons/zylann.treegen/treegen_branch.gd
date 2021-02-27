@@ -1,8 +1,8 @@
 tool
 extends "treegen_node.gd"
 
-const TG_SpawnParams = preload("./core/tg_spawn_params.gd")
-const TG_GrowParams = preload("./core/tg_grow_params.gd")
+const TG_SpawnParams = preload("./native/tg_spawn_params.gdns")
+const TG_GrowParams = preload("./native/tg_path_params.gdns")
 
 
 const _properties = {
@@ -37,9 +37,7 @@ const _properties = {
 
 func _init():
 	_data = TG_Node.new()
-	_data.type = TG_Node.TYPE_BRANCH
-	_data.spawn_params = TG_SpawnParams.new()
-	_data.grow_params = TG_GrowParams.new()
+	#_data.set_type(TG_Node.TYPE_BRANCH)
 	
 	var curve = Curve.new()
 	curve.clear_points()
@@ -47,7 +45,7 @@ func _init():
 	curve.add_point(Vector2(0.5, 1))
 	curve.add_point(Vector2(1, 1))
 	curve.bake()
-	_set_resource(_data.grow_params, "length_curve_along_parent", curve)
+	_set_resource(_data.get_path_params(), "length_curve_along_parent", curve)
 
 	curve = Curve.new()
 	curve.clear_points()
@@ -55,7 +53,7 @@ func _init():
 	curve.add_point(Vector2(0.5, 1))
 	curve.add_point(Vector2(1, 1))
 	curve.bake()
-	_set_resource(_data.grow_params, "radius_curve_along_parent", curve)
+	_set_resource(_data.get_path_params(), "radius_curve_along_parent", curve)
 
 
 func _get_property_list() -> Array:
@@ -232,32 +230,32 @@ func _get_property_list() -> Array:
 
 func _get(p_key: String):
 	if p_key == "local_seed":
-		return _data.local_seed
+		return _data.get_local_seed()
 	
 	elif p_key == "end_cap_flat":
-		return _data.grow_params.end_cap_flat
+		return _data.get_path_params().end_cap_flat
 
 	elif p_key.begins_with("path_"):
 		if p_key in _properties:
 			var key = p_key.right(5)
-			return _data.grow_params.get(key)
+			return _data.get_path_params().get(key)
 
 	if p_key.begins_with("spawn_"):
 		if p_key in _properties:
 			var key = p_key.right(6)
-			return _data.spawn_params.get(key)
+			return _data.get_spawn_params().get(key)
 
 	return null
 
 
 func _set(p_key: String, value):
 	if p_key == "local_seed":
-		_data.local_seed = value
+		_data.set_local_seed(value)
 		_on_data_changed()
 		return true
 	
 	elif p_key == "end_cap_flat":
-		_data.grow_params.end_cap_flat = value
+		_data.get_path_params().end_cap_flat = value
 		_on_data_changed()
 		return true
 	
@@ -265,16 +263,16 @@ func _set(p_key: String, value):
 		if p_key in _properties:
 			var key = p_key.right(5)
 			if _properties[p_key] == TYPE_OBJECT:
-				_set_resource(_data.grow_params, key, value)
+				_set_resource(_data.get_path_params(), key, value)
 			else:
-				_data.grow_params.set(key, value)
+				_data.get_path_params().set(key, value)
 			_on_data_changed()
 			return true
 			
 	elif p_key.begins_with("spawn_"):
 		if p_key in _properties:
 			var key = p_key.right(6)
-			_data.spawn_params.set(key, value)
+			_data.get_spawn_params().set(key, value)
 			_on_data_changed()
 			return true
 
