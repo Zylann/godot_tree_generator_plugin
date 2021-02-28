@@ -6,6 +6,12 @@
 #include <gen/Reference.hpp>
 #include <vector>
 
+struct TG_SurfaceData {
+	std::vector<godot::Vector3> positions;
+	std::vector<godot::Vector3> normals;
+	std::vector<int> indices;
+};
+
 class TG_NodeInstance : public godot::Reference {
 	GODOT_CLASS(TG_NodeInstance, godot::Reference)
 public:
@@ -18,10 +24,6 @@ public:
 	godot::Ref<TG_NodeInstance> get_child(int i) {
 		ERR_FAIL_INDEX_V(i, children.size(), godot::Ref<TG_NodeInstance>());
 		return children[i];
-	}
-
-	godot::Array get_surfaces() {
-		return surfaces;
 	}
 
 	int get_path_size() const {
@@ -38,7 +40,6 @@ public:
 	static void _register_methods() {
 		godot::register_method("get_child_count", &TG_NodeInstance::get_child_count);
 		godot::register_method("get_child", &TG_NodeInstance::get_child);
-		godot::register_method("get_surfaces", &TG_NodeInstance::get_surfaces);
 		godot::register_method("get_path_size", &TG_NodeInstance::get_path_size);
 		godot::register_method("get_path_transform", &TG_NodeInstance::get_path_transform);
 
@@ -46,7 +47,7 @@ public:
 	}
 
 	godot::Transform local_transform;
-	godot::Array surfaces;
+	TG_SurfaceData surface;
 
 	// Where is the node instance along its parent, as a 0 to 1 ratio
 	float offset_ratio = 0.f;

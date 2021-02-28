@@ -54,31 +54,20 @@ func generate():
 	_nodes.clear()
 	
 	var time_before = OS.get_ticks_msec()
-	_generator.generate()
+	var surfaces = _generator.generate()
 	var elapsed_gen = OS.get_ticks_msec() - time_before
 	
 	time_before = OS.get_ticks_msec()
-	_make_mesh_instances(_generator.get_root_node_instance(), Transform())
+	var mesh := ArrayMesh.new()
+	for surface in surfaces:
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface)
+	var mi = MeshInstance.new()
+	mi.mesh = mesh
+	add_child(mi)
+	_nodes.append(mi)
 	var elapsed_mesh = OS.get_ticks_msec() - time_before
 	
 	print("Gen: ", elapsed_gen, ", mesh: ", elapsed_mesh)
-
-
-func _make_mesh_instances(node_instance, base_transform: Transform):
-	var surfaces = node_instance.get_surfaces()
-	var mesh = ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surfaces)
-
-	var mi = MeshInstance.new()
-	mi.mesh = mesh
-	mi.transform = base_transform * node_instance.local_transform
-	add_child(mi)
-	_nodes.append(mi)
-	#_debug_axes(node_instance.path)
-
-	for i in node_instance.get_child_count():
-		var child = node_instance.get_child(i)
-		_make_mesh_instances(child, mi.transform)
 
 
 func schedule_parsing():

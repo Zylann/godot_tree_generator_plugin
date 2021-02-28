@@ -34,7 +34,7 @@ public:
 
 	godot::Ref<TG_NodeInstance> get_root_node_instance() const;
 
-	void generate();
+	godot::Array generate();
 
 	// Internal
 
