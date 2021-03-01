@@ -2,7 +2,8 @@ tool
 extends "treegen_node.gd"
 
 const _leaf_properties = {
-	"leaf_scale": 0
+	"leaf_scale": 0,
+	"leaf_scale_jitter": 0
 }
 
 var _leaf_material : Material
@@ -45,6 +46,11 @@ func _get_property_list() -> Array:
 		},
 		{
 			"name": "leaf_scale",
+			"type": TYPE_REAL,
+			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
+		},
+		{
+			"name": "leaf_scale_jitter",
 			"type": TYPE_REAL,
 			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
 		}

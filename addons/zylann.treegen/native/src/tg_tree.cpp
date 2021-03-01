@@ -457,16 +457,21 @@ static godot::Array combine_mesh_surfaces(const TG_NodeInstance &root_node_insta
 	return gd_surfaces;
 }
 
-static void generate_node_leaf(const TG_Node &node, TG_NodeInstance &node_instance) {
+static void generate_node_leaf(const TG_Node &node, TG_NodeInstance &node_instance, godot::RandomNumberGenerator &rng) {
 	const TG_LeafParams &leaf_params = node.get_leaf_params();
 
 	TG_SurfaceData &surface = get_or_create_surface(node_instance.surfaces, leaf_params.material_index);
 	const godot::Transform trans = godot::Transform(); //node_instance.local_transform;
 
+	float scale = leaf_params.scale;
+	if (leaf_params.scale_jitter > 0.f) {
+		scale += leaf_params.scale_jitter * rng.randf_range(-leaf_params.scale, leaf_params.scale);
+	}
+
 	// Let's start with a simple quad
 	// TODO Configurable params
-	const float width = 1.f * leaf_params.scale;
-	const float height = 1.f * leaf_params.scale;
+	const float width = 1.f * scale;
+	const float height = 1.f * scale;
 
 	//  3-------2
 	//  |     - |
@@ -575,7 +580,7 @@ void TG_Tree::process_node(const TG_Node &node, TG_NodeInstance &node_instance, 
 			break;
 
 		case TG_Node::TYPE_LEAF:
-			generate_node_leaf(node, node_instance);
+			generate_node_leaf(node, node_instance, rng);
 			break;
 
 		default:
