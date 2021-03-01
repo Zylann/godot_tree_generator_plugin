@@ -76,6 +76,7 @@ func generate():
 		mesh.surface_set_material(i, material)
 
 	var mi = MeshInstance.new()
+	mi.use_in_baked_light = true
 	mi.mesh = mesh
 	add_child(mi)
 	_nodes.append(mi)
