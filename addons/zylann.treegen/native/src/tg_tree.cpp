@@ -668,15 +668,16 @@ void TG_Tree::generate_node_path(const TG_Node &node, TG_NodeInstance &node_inst
 	// Plot base points
 
 	godot::Transform trans;
+	const float default_radius = 0.5f * (path_params.min_radius + path_params.max_radius);
+	godot::Ref<godot::Curve> radius_curve = path_params.radius_curve;
 
 	for (int i = 0; i < point_count; ++i) {
 		const float k = static_cast<float>(i) / point_count;
 
-		const float r = godot::Math::lerp(
-								path_params.begin_radius,
-								path_params.end_radius,
-								pow(k, path_params.radius_curve)) *
-						radius_multiplier;
+		const float r = path_params.radius_curve.is_valid() ?
+								godot::Math::lerp(path_params.min_radius, path_params.max_radius,
+										radius_curve->interpolate_baked(k)) :
+								default_radius;
 
 		radii.push_back(r);
 		path.push_back(trans);

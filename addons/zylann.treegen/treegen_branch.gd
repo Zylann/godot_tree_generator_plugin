@@ -6,9 +6,9 @@ const _path_properties = {
 	"path_length_randomness": 0,
 	"path_length_curve_along_parent": TYPE_OBJECT,
 	
-	"path_begin_radius": 0,
-	"path_end_radius": 0,
-	"path_radius_curve": 0,
+	"path_min_radius": 0,
+	"path_max_radius": 0,
+	"path_radius_curve": TYPE_OBJECT,
 	"path_radius_curve_along_parent": TYPE_OBJECT,
 
 	"path_noise_period": 0,
@@ -26,8 +26,15 @@ var _cap_material : Material
 
 func _init():
 	_data.set_type(TG_NODE_TYPE_BRANCH)
-	
+
 	var curve = Curve.new()
+	curve.clear_points()
+	curve.add_point(Vector2(0, 1))
+	curve.add_point(Vector2(1, 0))
+	curve.bake()
+	_set_resource_property(_data.get_path_params(), "radius_curve", curve)
+	
+	curve = Curve.new()
 	curve.clear_points()
 	curve.add_point(Vector2(0, 1))
 	curve.add_point(Vector2(0.5, 1))
@@ -100,19 +107,20 @@ func _get_property_list() -> Array:
 			"usage": PROPERTY_USAGE_GROUP
 		},
 		{
-			"name": "path_begin_radius",
+			"name": "path_min_radius",
 			"type": TYPE_REAL,
 			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
 		},
 		{
-			"name": "path_end_radius",
+			"name": "path_max_radius",
 			"type": TYPE_REAL,
 			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
 		},
 		{
 			"name": "path_radius_curve",
-			"type": TYPE_REAL,
-			"hint": PROPERTY_HINT_EXP_EASING,
+			"type": TYPE_OBJECT,
+			"hint": PROPERTY_HINT_RESOURCE_TYPE,
+			"hint_string": "Curve",
 			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
 		},
 		{

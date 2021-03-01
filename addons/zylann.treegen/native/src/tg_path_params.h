@@ -15,12 +15,11 @@ public:
 	float length_randomness = 0.f;
 
 	// Radius at the beginning at the branch
-	float begin_radius = 1.f;
+	float min_radius = 0.3f;
 	// Radius at the end of the branch
-	float end_radius = 0.3f;
+	float max_radius = 1.0f;
 	// How radius progresses between its begin and end value.
-	// This is calculated as `pow(offset / length, radius_curve)`
-	float radius_curve = 1.f;
+	godot::Ref<godot::Curve> radius_curve;
 	// Modulates the radii depending on where the branch spawns on the parent
 	godot::Ref<godot::Curve> radius_curve_along_parent;
 
@@ -63,9 +62,12 @@ public:
 				GODOT_PROPERTY_HINT_RESOURCE_TYPE, "Curve");
 
 		godot::register_property("length_randomness", &TG_PathParams::length_randomness, 0.f);
-		godot::register_property("begin_radius", &TG_PathParams::begin_radius, 1.f);
-		godot::register_property("end_radius", &TG_PathParams::end_radius, 0.3f);
-		godot::register_property("radius_curve", &TG_PathParams::radius_curve, 1.f);
+		godot::register_property("min_radius", &TG_PathParams::min_radius, 0.3f);
+		godot::register_property("max_radius", &TG_PathParams::max_radius, 1.0f);
+
+		godot::register_property("radius_curve", &TG_PathParams::radius_curve,
+				godot::Ref<godot::Curve>(), GODOT_METHOD_RPC_MODE_DISABLED, GODOT_PROPERTY_USAGE_DEFAULT,
+				GODOT_PROPERTY_HINT_RESOURCE_TYPE, "Curve");
 
 		godot::register_property("radius_curve_along_parent", &TG_PathParams::radius_curve_along_parent,
 				godot::Ref<godot::Curve>(), GODOT_METHOD_RPC_MODE_DISABLED, GODOT_PROPERTY_USAGE_DEFAULT,
