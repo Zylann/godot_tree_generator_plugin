@@ -152,7 +152,10 @@ func _set_resource_property(obj: Object, key: String, value: Resource):
 
 
 func _get(p_key: String):
-	if p_key.begins_with("spawn_"):
+	if p_key == "active":
+		return _data.is_active()
+
+	elif p_key.begins_with("spawn_"):
 		if p_key in _spawn_properties:
 			var key = p_key.right(6)
 			return _data.get_spawn_params().get(key)
@@ -161,7 +164,12 @@ func _get(p_key: String):
 
 
 func _set(p_key: String, value):
-	if p_key.begins_with("spawn_"):
+	if p_key == "active":
+		_data.set_active(value)
+		_on_data_changed()
+		return true
+	
+	elif p_key.begins_with("spawn_"):
 		if p_key in _spawn_properties:
 			var key = p_key.right(6)
 			_data.get_spawn_params().set(key, value)

@@ -41,6 +41,14 @@ public:
 		_local_seed = p_local_seed;
 	}
 
+	bool is_active() const {
+		return _active;
+	}
+
+	void set_active(bool active) {
+		_active = active;
+	}
+
 	int get_child_count() const {
 		return static_cast<int>(_children.size());
 	}
@@ -84,6 +92,9 @@ public:
 		godot::register_method("get_local_seed", &TG_Node::get_local_seed);
 		godot::register_method("set_local_seed", &TG_Node::set_local_seed);
 
+		godot::register_method("is_active", &TG_Node::is_active);
+		godot::register_method("set_active", &TG_Node::set_active);
+
 		godot::register_method("set_type", &TG_Node::_b_set_type);
 
 		godot::register_method("get_child_count", &TG_Node::get_child_count);
@@ -120,6 +131,7 @@ private:
 	godot::Ref<TG_PathParams> _path_params;
 	godot::Ref<TG_LeafParams> _leaf_params;
 	int _local_seed = 0;
+	bool _active = true;
 	Type _type = TYPE_BRANCH;
 	std::vector<godot::Ref<TG_Node> > _children;
 };

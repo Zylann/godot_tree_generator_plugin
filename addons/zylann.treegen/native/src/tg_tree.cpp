@@ -555,6 +555,9 @@ godot::Ref<TG_NodeInstance> TG_Tree::get_root_node_instance() const {
 godot::Array TG_Tree::generate() {
 	ERR_FAIL_COND_V(_root_node.is_null(), godot::Array());
 	_root_instance.instance();
+	if (!_root_node->is_active()) {
+		return godot::Array();
+	}
 	godot::Ref<godot::RandomNumberGenerator> rng;
 	rng.instance();
 	rng->set_seed(_global_seed + _root_node->get_local_seed());
@@ -592,6 +595,10 @@ void TG_Tree::process_node(const TG_Node &node, TG_NodeInstance &node_instance, 
 	// Process children
 	for (int i = 0; i < node.get_child_count(); ++i) {
 		const TG_Node &child = node.get_child_internal(i);
+
+		if (!child.is_active()) {
+			continue;
+		}
 
 		godot::Ref<godot::RandomNumberGenerator> child_rng;
 		child_rng.instance();

@@ -61,6 +61,11 @@ func _get_property_list() -> Array:
 
 	props.append_array([
 		{
+			"name": "active",
+			"type": TYPE_BOOL,
+			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
+		},
+		{
 			"name": "local_seed",
 			"type": TYPE_INT,
 			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
