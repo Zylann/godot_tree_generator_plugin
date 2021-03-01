@@ -3,6 +3,7 @@ extends Node
 
 # Using `var` instead of `const` because otherwise it creates a cyclic dependency
 var TreeGenTree = load("res://addons/zylann.treegen/treegen_tree.gd")
+var TreeGenNode = load("res://addons/zylann.treegen/treegen_node.gd")
 const TG_Node = preload("./native/tg_node.gdns")
 const Util = preload("./util.gd")
 
@@ -105,7 +106,7 @@ const _spawn_properties_list = [
 func _get_configuration_warning() -> String:
 	if _tree == null:
 		return "This node must be under a TreeGen root"
-	if not (get_parent() is get_script() or get_parent() is TreeGenTree):
+	if not (get_parent() is TreeGenNode or get_parent() is TreeGenTree):
 		return "This node must be under a TreeGen node"
 	return ""
 
