@@ -457,6 +457,52 @@ static godot::Array combine_mesh_surfaces(const TG_NodeInstance &root_node_insta
 	return gd_surfaces;
 }
 
+static void generate_node_leaf(const TG_Node &node, TG_NodeInstance &node_instance) {
+	const TG_LeafParams &leaf_params = node.get_leaf_params();
+
+	TG_SurfaceData &surface = get_or_create_surface(node_instance.surfaces, leaf_params.material_index);
+	const godot::Transform trans = godot::Transform(); //node_instance.local_transform;
+
+	// Let's start with a simple quad
+	// TODO Configurable params
+	const float width = 1.f;
+	const float height = 1.f;
+
+	//  3-------2
+	//  |     - |
+	//  |   -   |    y
+	//  | -     |    |
+	//  0---o---1    o---x
+
+	// TODO Y rotation
+
+	const godot::Vector3 xv = trans.basis.x * width * 0.5f;
+
+	surface.positions.push_back(trans.origin - xv);
+	surface.positions.push_back(trans.origin + xv);
+	surface.positions.push_back(trans.origin + xv + trans.basis.y * height);
+	surface.positions.push_back(trans.origin - xv + trans.basis.y * height);
+
+	surface.normals.push_back(trans.basis.z);
+	surface.normals.push_back(trans.basis.z);
+	surface.normals.push_back(trans.basis.z);
+	surface.normals.push_back(trans.basis.z);
+
+	// TODO Use an atlas?
+	surface.uvs.push_back(godot::Vector2(0.f, 0.f));
+	surface.uvs.push_back(godot::Vector2(1.f, 0.f));
+	surface.uvs.push_back(godot::Vector2(1.f, 1.f));
+	surface.uvs.push_back(godot::Vector2(0.f, 1.f));
+
+	const TG_Tangents tangents = get_tangents_from_axes(trans.basis.z, trans.basis.y, trans.basis.x);
+	surface.tangents.push_back(tangents);
+	surface.tangents.push_back(tangents);
+	surface.tangents.push_back(tangents);
+	surface.tangents.push_back(tangents);
+
+	add_quad_indices(surface.indices, 0, 1, 3, 2);
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void TG_Tree::_init() {
@@ -520,8 +566,20 @@ godot::Array TG_Tree::generate() {
 void TG_Tree::process_node(const TG_Node &node, TG_NodeInstance &node_instance, godot::Vector3 sun_dir_local,
 		godot::RandomNumberGenerator &rng) {
 
-	if (node.get_type() == TG_Node::TYPE_BRANCH) {
-		generate_node_path(node, node_instance, sun_dir_local, rng);
+	switch (node.get_type()) {
+		case TG_Node::TYPE_BRANCH:
+			generate_node_path(node, node_instance, sun_dir_local, rng);
+			break;
+
+		case TG_Node::TYPE_LEAF:
+			generate_node_leaf(node, node_instance);
+			break;
+
+		default:
+			godot::Array args;
+			args.append(static_cast<int>(node.get_type()));
+			ERR_PRINT(godot::String("Unknown node type {0}").format(args));
+			break;
 	}
 
 	if (node.get_child_count() == 0) {

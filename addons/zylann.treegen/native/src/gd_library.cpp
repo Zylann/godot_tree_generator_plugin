@@ -18,6 +18,7 @@ void GDN_EXPORT godot_nativescript_init(void *handle) {
 
 	godot::register_tool_class<TG_SpawnParams>();
 	godot::register_tool_class<TG_PathParams>();
+	godot::register_tool_class<TG_LeafParams>();
 	godot::register_tool_class<TG_Node>();
 	godot::register_tool_class<TG_NodeInstance>();
 	godot::register_tool_class<TG_Tree>();

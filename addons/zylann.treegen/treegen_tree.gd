@@ -2,8 +2,8 @@ tool
 extends Spatial
 
 const TG_Tree = preload("./native/tg_tree.gdns")
-const TG_Node = preload("./native/tg_node.gdns")
-const TG_NodeInstance = preload("./native/tg_node_instance.gdns")
+#const TG_Node = preload("./native/tg_node.gdns")
+#const TG_NodeInstance = preload("./native/tg_node_instance.gdns")
 const TreeGenNode = preload("./treegen_node.gd")
 
 const AxesScene = preload("./axes.tscn")

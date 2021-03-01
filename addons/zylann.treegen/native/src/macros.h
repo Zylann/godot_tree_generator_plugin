@@ -4,6 +4,7 @@
 #include <Defs.hpp>
 
 // TODO godot-cpp CRASH_COND does not stop execution
+// https://github.com/godotengine/godot-cpp/issues/521
 #define TG_CRASH_COND(cond)                  \
 	do {                                     \
 		if (unlikely(cond)) {                \

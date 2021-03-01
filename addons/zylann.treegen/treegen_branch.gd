@@ -1,11 +1,7 @@
 tool
 extends "treegen_node.gd"
 
-const TG_SpawnParams = preload("./native/tg_spawn_params.gdns")
-const TG_GrowParams = preload("./native/tg_path_params.gdns")
-
-
-const _properties = {
+const _path_properties = {
 	"path_length": 0,
 	"path_length_randomness": 0,
 	"path_length_curve_along_parent": TYPE_OBJECT,
@@ -21,19 +17,7 @@ const _properties = {
 	"path_noise_curve": 0,
 	"path_seek_sun": 0,
 
-	"path_uv_scale": 0,
-	
-	"spawn_along_base_amount": 0,
-	"spawn_along_amount_per_unit": 0,
-	"spawn_along_begin_ratio": 0,
-	"spawn_along_end_ratio": 0,
-	"spawn_along_jitter": 0,
-	"spawn_around_amount": 0,
-	"spawn_around_jitter": 0,
-	"spawn_around_offset": 0,
-	"spawn_skip_probability": 0,
-	"spawn_vertical_angle": 0,
-	"spawn_vertical_angle_jitter": 0
+	"path_uv_scale": 0
 }
 
 var _main_material : Material
@@ -41,8 +25,7 @@ var _cap_material : Material
 
 
 func _init():
-	_data = TG_Node.new()
-	#_data.set_type(TG_Node.TYPE_BRANCH)
+	_data.set_type(TG_NODE_TYPE_BRANCH)
 	
 	var curve = Curve.new()
 	curve.clear_points()
@@ -50,7 +33,7 @@ func _init():
 	curve.add_point(Vector2(0.5, 1))
 	curve.add_point(Vector2(1, 1))
 	curve.bake()
-	_set_resource(_data.get_path_params(), "length_curve_along_parent", curve)
+	_set_resource_property(_data.get_path_params(), "length_curve_along_parent", curve)
 
 	curve = Curve.new()
 	curve.clear_points()
@@ -58,7 +41,7 @@ func _init():
 	curve.add_point(Vector2(0.5, 1))
 	curve.add_point(Vector2(1, 1))
 	curve.bake()
-	_set_resource(_data.get_path_params(), "radius_curve_along_parent", curve)
+	_set_resource_property(_data.get_path_params(), "radius_curve_along_parent", curve)
 
 
 func get_materials() -> Array:
@@ -74,7 +57,9 @@ func assign_material_indexes(material_to_index: Dictionary):
 
 
 func _get_property_list() -> Array:
-	return [
+	var props = []
+
+	props.append_array([
 		{
 			"name": "local_seed",
 			"type": TYPE_INT,
@@ -168,81 +153,12 @@ func _get_property_list() -> Array:
 			"name": "path_seek_sun",
 			"type": TYPE_REAL,
 			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		#####################################################
-		{
-			"name": "Spawn Along",
-			"type": TYPE_NIL,
-			"usage": PROPERTY_USAGE_GROUP
-		},
-		{
-			"name": "spawn_along_base_amount",
-			"type": TYPE_INT,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		{
-			"name": "spawn_along_amount_per_unit",
-			"type": TYPE_REAL,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		{
-			"name": "spawn_along_begin_ratio",
-			"type": TYPE_REAL,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		{
-			"name": "spawn_along_end_ratio",
-			"type": TYPE_REAL,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		{
-			"name": "spawn_along_jitter",
-			"type": TYPE_REAL,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		#####################################################
-		{
-			"name": "Spawn Around",
-			"type": TYPE_NIL,
-			"usage": PROPERTY_USAGE_GROUP
-		},
-		{
-			"name": "spawn_around_amount",
-			"type": TYPE_INT,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		{
-			"name": "spawn_around_jitter",
-			"type": TYPE_REAL,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		{
-			"name": "spawn_around_offset",
-			"type": TYPE_REAL,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		{
-			"name": "spawn_skip_probability",
-			"type": TYPE_REAL,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		#####################################################
-		{
-			"name": "Spawn angle",
-			"type": TYPE_NIL,
-			"usage": PROPERTY_USAGE_GROUP
-		},
-		{
-			"name": "spawn_vertical_angle",
-			"type": TYPE_REAL,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		{
-			"name": "spawn_vertical_angle_jitter",
-			"type": TYPE_REAL,
-			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
-		},
-		#####################################################
+		}
+	])
+
+	props.append_array(_spawn_properties_list)
+
+	props.append_array([
 		{
 			"name": "Materials",
 			"type": TYPE_NIL,
@@ -267,7 +183,9 @@ func _get_property_list() -> Array:
 			"type": TYPE_VECTOR2,
 			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
 		}
-	]
+	])
+
+	return props
 
 
 func _get(p_key: String):
@@ -284,14 +202,9 @@ func _get(p_key: String):
 		return _cap_material
 
 	elif p_key.begins_with("path_"):
-		if p_key in _properties:
+		if p_key in _path_properties:
 			var key = p_key.right(5)
 			return _data.get_path_params().get(key)
-
-	if p_key.begins_with("spawn_"):
-		if p_key in _properties:
-			var key = p_key.right(6)
-			return _data.get_spawn_params().get(key)
 
 	return null
 
@@ -318,35 +231,14 @@ func _set(p_key: String, value):
 		return true
 	
 	elif p_key.begins_with("path_"):
-		if p_key in _properties:
+		if p_key in _path_properties:
 			var key = p_key.right(5)
-			if _properties[p_key] == TYPE_OBJECT:
-				_set_resource(_data.get_path_params(), key, value)
+			if _path_properties[p_key] == TYPE_OBJECT:
+				_set_resource_property(_data.get_path_params(), key, value)
 			else:
 				_data.get_path_params().set(key, value)
 			_on_data_changed()
 			return true
-			
-	elif p_key.begins_with("spawn_"):
-		if p_key in _properties:
-			var key = p_key.right(6)
-			_data.get_spawn_params().set(key, value)
-			_on_data_changed()
-			return true
-
+	
 	return false
-
-
-func _on_data_changed():
-	if _tree != null:
-		_tree.schedule_parsing()
-
-
-func _set_resource(obj: Object, key: String, value: Resource):
-	var prev : Resource = obj.get(key)
-	if prev != null:
-		prev.disconnect("changed", self, "_on_data_changed")
-	obj.set(key, value)
-	if value != null:
-		value.connect("changed", self, "_on_data_changed")
 

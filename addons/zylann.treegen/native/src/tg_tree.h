@@ -61,9 +61,11 @@ private:
 			godot::RandomNumberGenerator &rng, float parent_length);
 
 	int _global_seed = 1337;
+
 	float _mesh_divisions_per_unit = 1.f;
 	float _branch_segments_per_unit = 1.f;
 	bool _constant_mesh_divisions = false;
+
 	godot::Ref<TG_Node> _root_node;
 	godot::Ref<TG_NodeInstance> _root_instance;
 };

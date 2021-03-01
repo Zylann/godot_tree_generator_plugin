@@ -6,6 +6,7 @@
 #include <gen/Reference.hpp>
 #include <vector>
 
+// Godot expects 4 floats per tangent. This struct should match the same layout.
 struct TG_Tangents {
 	godot::Vector3 tangent;
 	float binormal_sign;
