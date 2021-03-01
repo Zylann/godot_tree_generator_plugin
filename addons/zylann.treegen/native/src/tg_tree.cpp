@@ -22,9 +22,9 @@ static godot::Transform interpolate_path(const std::vector<godot::Transform> tra
 		TG_CRASH_COND(i <= 0);
 		const godot::Transform &prev_trans = transforms[i - 1];
 		const godot::Transform &trans = transforms[i];
-		const float prev_d = distances[i];
+		const float prev_d = distances[i - 1];
 		const float d = distances[i];
-		const float t = (d - prev_d) / offset;
+		const float t = (offset - prev_d) / (d - prev_d);
 		return prev_trans.interpolate_with(trans, t);
 	}
 
