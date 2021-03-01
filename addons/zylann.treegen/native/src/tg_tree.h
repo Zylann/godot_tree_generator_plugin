@@ -18,6 +18,8 @@ class RandomNumberGenerator;
 class TG_Tree : public godot::Reference {
 	GODOT_CLASS(TG_Tree, godot::Reference)
 public:
+	static const int MAX_MATERIALS = 32;
+
 	void _init();
 
 	int get_global_seed() const;
@@ -28,6 +30,9 @@ public:
 
 	float get_branch_segments_per_unit() const;
 	void set_branch_segments_per_unit(float b);
+
+	bool get_constant_mesh_divisions() const;
+	void set_constant_mesh_divisions(bool b);
 
 	godot::Ref<TG_Node> get_root_node() const;
 	void set_root_node(godot::Ref<TG_Node> node);
@@ -58,6 +63,7 @@ private:
 	int _global_seed = 1337;
 	float _mesh_divisions_per_unit = 1.f;
 	float _branch_segments_per_unit = 1.f;
+	bool _constant_mesh_divisions = false;
 	godot::Ref<TG_Node> _root_node;
 	godot::Ref<TG_NodeInstance> _root_instance;
 };

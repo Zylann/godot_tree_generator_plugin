@@ -6,9 +6,16 @@
 #include <gen/Reference.hpp>
 #include <vector>
 
+struct TG_Tangents {
+	godot::Vector3 tangent;
+	float binormal_sign;
+};
+
 struct TG_SurfaceData {
 	std::vector<godot::Vector3> positions;
 	std::vector<godot::Vector3> normals;
+	std::vector<godot::Vector2> uvs;
+	std::vector<TG_Tangents> tangents;
 	std::vector<int> indices;
 };
 
@@ -47,7 +54,7 @@ public:
 	}
 
 	godot::Transform local_transform;
-	TG_SurfaceData surface;
+	std::vector<TG_SurfaceData> surfaces;
 
 	// Where is the node instance along its parent, as a 0 to 1 ratio
 	float offset_ratio = 0.f;

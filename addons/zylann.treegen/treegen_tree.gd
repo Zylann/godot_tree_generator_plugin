@@ -14,11 +14,13 @@ export(int) var global_seed = 0 setget set_global_seed
 # Quality settings
 export(float) var mesh_divisions_per_unit := 1.0 setget set_mesh_divisions_per_unit
 export(float) var branch_segments_per_unit := 1.0 setget set_branch_segments_per_unit
+export(bool) var constant_mesh_divisions := false setget set_constant_mesh_divisions
 
 # Tree
 var _generator = TG_Tree.new()
 var _nodes = []
 var _parsing_scheduled = false
+var _materials = []
 
 
 #func _ready():
@@ -48,6 +50,13 @@ func set_branch_segments_per_unit(v: float):
 		generate()
 
 
+func set_constant_mesh_divisions(b: bool):
+	constant_mesh_divisions = b
+	_generator.set_constant_mesh_divisions(b)
+	if is_inside_tree():
+		generate()
+
+
 func generate():
 	for node in _nodes:
 		node.queue_free()
@@ -58,13 +67,19 @@ func generate():
 	var elapsed_gen = OS.get_ticks_msec() - time_before
 	
 	time_before = OS.get_ticks_msec()
+
 	var mesh := ArrayMesh.new()
-	for surface in surfaces:
+	for i in len(surfaces):
+		var surface : Array = surfaces[i]
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface)
+		var material : Material = _materials[i]
+		mesh.surface_set_material(i, material)
+
 	var mi = MeshInstance.new()
 	mi.mesh = mesh
 	add_child(mi)
 	_nodes.append(mi)
+
 	var elapsed_mesh = OS.get_ticks_msec() - time_before
 	
 	print("Gen: ", elapsed_gen, ", mesh: ", elapsed_mesh)
@@ -81,31 +96,48 @@ func _parse_scene_nodes():
 	if not is_inside_tree():
 		# WTF are you doing
 		return
+
+	var material_to_index = {}
 	
-	var root
 	for child in get_children():
 		if child is TreeGenNode:
 			# Root
-			root = child.get_tg_node()
-			_parse_scene_nodes_recursive(child)
+			var root = child.get_tg_node()
+			_parse_scene_nodes_recursive(child, material_to_index)
+			print("Setting root ", root != null)
 			_generator.set_root_node(root)
 			break
 
+	_materials.resize(len(material_to_index))
+	for material in material_to_index:
+		var i : int = material_to_index[material]
+		_materials[i] = material
+
 	generate()
+
 	_parsing_scheduled = false
 
 
-func _parse_scene_nodes_recursive(scene_node: TreeGenNode):
+func _parse_scene_nodes_recursive(scene_node: TreeGenNode, material_to_index: Dictionary):
+	var materials : Array = scene_node.get_materials()
+	for material in materials:
+		if not material_to_index.has(material):
+			var material_index := len(material_to_index)
+			material_to_index[material] = material_index
+
+	scene_node.assign_material_indexes(material_to_index)
+
 	var tg_node = scene_node.get_tg_node()
 	if tg_node == null:
 		return
 	tg_node.clear_children()
+
 	for child_scene_node in scene_node.get_children():
 		if child_scene_node is TreeGenNode:
 			var child_tg_node = child_scene_node.get_tg_node()
 			if child_tg_node != null:
 				tg_node.add_child(child_tg_node)
-				_parse_scene_nodes_recursive(child_scene_node)
+				_parse_scene_nodes_recursive(child_scene_node, material_to_index)
 
 
 #func _clear_debug_axes():

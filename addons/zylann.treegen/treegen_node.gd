@@ -31,6 +31,16 @@ func _get_configuration_warning() -> String:
 	return ""
 
 
+func get_materials() -> Array:
+	# Implemented in subclasses
+	return []
+
+
+func assign_material_indexes(material_to_index: Dictionary):
+	# Implemented in subclasses
+	pass
+
+
 func _notification(what: int):
 	match what:
 		NOTIFICATION_PARENTED:

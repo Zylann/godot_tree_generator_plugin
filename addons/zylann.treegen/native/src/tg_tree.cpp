@@ -1,32 +1,9 @@
 #include "tg_tree.h"
+#include "utility.h"
+
 #include <gen/Mesh.hpp>
 #include <gen/OpenSimplexNoise.hpp>
 #include <gen/RandomNumberGenerator.hpp>
-
-template <typename T>
-T max(T a, T b) {
-	return a > b ? a : b;
-}
-
-godot::PoolVector3Array to_pool_array(const std::vector<godot::Vector3> &src) {
-	godot::PoolVector3Array dst;
-	dst.resize(static_cast<int>(src.size()));
-	{
-		godot::PoolVector3Array::Write w = dst.write();
-		memcpy(w.ptr(), src.data(), src.size() * sizeof(godot::Vector3));
-	}
-	return dst;
-}
-
-godot::PoolIntArray to_pool_array(const std::vector<int> &src) {
-	godot::PoolIntArray dst;
-	dst.resize(static_cast<int>(src.size()));
-	{
-		godot::PoolIntArray::Write w = dst.write();
-		memcpy(w.ptr(), src.data(), src.size() * sizeof(int));
-	}
-	return dst;
-}
 
 static godot::Transform interpolate_path(const std::vector<godot::Transform> transforms,
 		const std::vector<float> &distances, float offset) {
@@ -102,7 +79,7 @@ static void calc_orientations(std::vector<godot::Transform> &transforms, const f
 	}
 }
 
-static void add_quad_indices(std::vector<int> &indices, int i0, int i1, int i2, int i3) {
+inline void add_quad_indices(std::vector<int> &indices, int i0, int i1, int i2, int i3) {
 	//  --2---3--
 	//    |  /|
 	//    | / |
@@ -118,11 +95,11 @@ static void add_quad_indices(std::vector<int> &indices, int i0, int i1, int i2, 
 	indices.push_back(i3);
 }
 
-static void connect_rings_with_same_point_count(std::vector<int> &indices, int prev_ring_begin, int point_count) {
-	int i0 = prev_ring_begin;
-	int i1 = prev_ring_begin + 1;
-	int i2 = prev_ring_begin + point_count;
-	int i3 = prev_ring_begin + point_count + 1;
+static void connect_strips_with_same_point_count(std::vector<int> &indices, int prev_strip_begin, int point_count) {
+	int i0 = prev_strip_begin;
+	int i1 = prev_strip_begin + 1;
+	int i2 = prev_strip_begin + point_count;
+	int i3 = prev_strip_begin + point_count + 1;
 
 	for (int i = 1; i < point_count; ++i) {
 		add_quad_indices(indices, i0, i1, i2, i3);
@@ -131,24 +108,19 @@ static void connect_rings_with_same_point_count(std::vector<int> &indices, int p
 		++i2;
 		++i3;
 	}
-
-	// Last quad closes the loop
-	i1 = prev_ring_begin;
-	i3 = prev_ring_begin + point_count;
-	add_quad_indices(indices, i0, i1, i2, i3);
 }
 
-static void connect_rings_with_different_point_count(std::vector<int> &indices,
-		int prev_ring_begin, int prev_point_count, int next_ring_begin, int next_point_count) {
+static void connect_strips_with_different_point_count(std::vector<int> &indices,
+		int prev_strip_begin, int prev_point_count, int next_strip_begin, int next_point_count) {
 
-	// Assumes rings have evenly sparsed points and their starting point is aligned.
+	// Assumes strips have evenly sparsed points and their starting point is aligned.
 	// If not then it would require an implementation that finds the closest points.
 
 	// Could have symetrical functions... but harder to maintain
 
 	bool flip_winding = false;
 	if (prev_point_count < next_point_count) {
-		std::swap(prev_ring_begin, next_ring_begin);
+		std::swap(prev_strip_begin, next_strip_begin);
 		std::swap(prev_point_count, next_point_count);
 		flip_winding = true;
 	}
@@ -158,34 +130,30 @@ static void connect_rings_with_different_point_count(std::vector<int> &indices,
 	const float k = static_cast<float>(next_point_count) / static_cast<float>(prev_point_count);
 	float c = 0.f;
 
-	const int min_dst_i = next_ring_begin;
-	const int max_dst_i = next_ring_begin + next_point_count;
-
-	const int min_src_i = prev_ring_begin;
-	const int max_src_i = prev_ring_begin + prev_point_count;
-
-	int src_i = prev_ring_begin;
-	int dst_i = next_ring_begin;
+	int src_i = prev_strip_begin;
+	int dst_i = next_strip_begin;
 
 	const size_t added_indices_begin = indices.size();
 
-	for (int i = 0; i < prev_point_count; ++i) {
-		int prev_src_i = src_i;
+	//  o-------o-------o next
+	//  |\     /|\     /|
+	//  | \   / | \   / |
+	//  |  \ /  |  \ /  |
+	//  o---o---o---o---o prev
+
+	for (int i = 0; i < prev_point_count - 1; ++i) {
+		const int prev_src_i = src_i;
 		++src_i;
-		if (src_i == max_src_i) {
-			src_i = min_src_i;
-		}
+		// Add lower triangle
 		indices.push_back(prev_src_i);
 		indices.push_back(dst_i);
 		indices.push_back(src_i);
 		c += k;
 		if (c >= 0.5f) {
-			c -= 1.0;
-			int prev_dst_i = dst_i;
+			c -= 1.0f;
+			const int prev_dst_i = dst_i;
 			++dst_i;
-			if (dst_i == max_dst_i) {
-				dst_i = min_dst_i;
-			}
+			// Add upper triangle
 			indices.push_back(src_i);
 			indices.push_back(prev_dst_i);
 			indices.push_back(dst_i);
@@ -199,96 +167,201 @@ static void connect_rings_with_different_point_count(std::vector<int> &indices,
 	}
 }
 
-static void add_cap(std::vector<godot::Vector3> &positions, std::vector<godot::Vector3> &normals,
-		std::vector<int> &indices, const godot::Transform &trans, int point_count, bool flat) {
+static TG_Tangents get_tangents_from_axes(const godot::Vector3 normal, godot::Vector3 binormal,
+		const godot::Vector3 tangent) {
+
+	float d = binormal.dot(normal.cross(tangent));
+	TG_Tangents t;
+	t.tangent = tangent;
+	t.binormal_sign = d < 0.f ? -1.f : 1.f;
+	return t;
+}
+
+static void add_cap(TG_SurfaceData &surface, const TG_SurfaceData &base_surface, const godot::Transform &trans,
+		int point_count, bool flat, float radius) {
 
 	TG_CRASH_COND(point_count < 0);
 
-	if (flat) {
-		int i0 = static_cast<int>(positions.size()) - point_count;
+	{
+		// Duplicate vertices of the last ring
+		const int i0 = static_cast<int>(base_surface.positions.size()) - point_count;
+		const godot::Transform trans_inv = trans.inverse();
+
 		for (int pi = 0; pi < point_count; ++pi) {
-			const godot::Vector3 p = positions[i0 + pi];
-			positions.push_back(p);
-			normals.push_back(trans.basis.y);
+			const int i = i0 + pi;
+
+			const godot::Vector3 p = base_surface.positions[i];
+			surface.positions.push_back(p);
+
+			if (flat) {
+				surface.normals.push_back(trans.basis.y);
+
+				const TG_Tangents t = get_tangents_from_axes(trans.basis.y, trans.basis.x, trans.basis.z);
+				surface.tangents.push_back(t);
+
+				const godot::Vector3 local_pos = trans_inv.xform(p);
+				const godot::Vector2 uv(
+						godot::Math::clamp(0.5f + 0.5f * local_pos.x / radius, 0.f, 1.f),
+						godot::Math::clamp(0.5f + 0.5f * local_pos.z / radius, 0.f, 1.f));
+				surface.uvs.push_back(uv);
+
+			} else {
+				const godot::Vector3 n = base_surface.normals[i];
+				surface.normals.push_back(n);
+
+				const TG_Tangents t = base_surface.tangents[i];
+				surface.tangents.push_back(t);
+
+				const godot::Vector2 uv = base_surface.uvs[i];
+				surface.uvs.push_back(uv);
+			}
 		}
 	}
 
-	positions.push_back(trans.origin);
-	normals.push_back(trans.basis.y);
+	// Central vertex
+	surface.positions.push_back(trans.origin);
+	surface.normals.push_back(trans.basis.y);
+	surface.uvs.push_back(godot::Vector2(0.5f, 0.5f));
+	{
+		const TG_Tangents t = get_tangents_from_axes(trans.basis.y, trans.basis.x, trans.basis.z);
+		surface.tangents.push_back(t);
+	}
 
-	int ib = static_cast<int>(positions.size()) - point_count - 1;
-	int ie = static_cast<int>(positions.size()) - 1;
+	// Create triangles
+
+	int ib = static_cast<int>(surface.positions.size()) - point_count - 1;
+	int ie = static_cast<int>(surface.positions.size()) - 1;
 
 	int i0 = ib;
 
 	for (int i = 1; i < point_count; ++i) {
-		indices.push_back(i0);
+		surface.indices.push_back(i0);
 		++i0;
-		indices.push_back(ie);
-		indices.push_back(i0);
+		surface.indices.push_back(ie);
+		surface.indices.push_back(i0);
 	}
 
-	indices.push_back(i0);
-	indices.push_back(ie);
-	indices.push_back(ib);
+	surface.indices.push_back(i0);
+	surface.indices.push_back(ie);
+	surface.indices.push_back(ib);
 }
 
-static void generate_path_mesh(TG_SurfaceData &surface, const std::vector<godot::Transform> &transforms,
-		const std::vector<float> &radii, float mesh_divisions_per_unit, bool end_cap_flat) {
+static TG_SurfaceData &get_or_create_surface(std::vector<TG_SurfaceData> &surfaces, int surface_index) {
+	if (surface_index >= surfaces.size()) {
+		surfaces.resize(surface_index + 1);
+	}
+	return surfaces[surface_index];
+}
+
+static void copy_range(TG_SurfaceData &surface, size_t src_i0, size_t count) {
+	TG_CRASH_COND(src_i0 >= surface.positions.size());
+
+	const size_t dst_i0 = surface.positions.size();
+	const size_t new_vertex_count = surface.positions.size() + count;
+
+	surface.positions.resize(new_vertex_count);
+	surface.normals.resize(new_vertex_count);
+	surface.uvs.resize(new_vertex_count);
+	surface.tangents.resize(new_vertex_count);
+
+	for (size_t i = 0; i < count; ++i) {
+		const size_t src_i = src_i0 + i;
+		const size_t dst_i = dst_i0 + i;
+
+		surface.positions[dst_i] = surface.positions[src_i];
+		surface.normals[dst_i] = surface.normals[src_i];
+		surface.uvs[dst_i] = surface.uvs[src_i];
+		surface.tangents[dst_i] = surface.tangents[src_i];
+	}
+}
+
+static void generate_path_mesh(std::vector<TG_SurfaceData> &surfaces, const std::vector<godot::Transform> &transforms,
+		const std::vector<float> &radii, const std::vector<float> distances, float mesh_divisions_per_unit,
+		bool end_cap_flat, int main_material_index, int cap_material_index, godot::Vector2 uv_scale,
+		bool constant_divisions) {
 
 	TG_CRASH_COND(transforms.size() != radii.size());
-
-	std::vector<godot::Vector3> &vertices = surface.positions;
-	std::vector<godot::Vector3> &normals = surface.normals;
-	std::vector<int> &indices = surface.indices;
+	ERR_FAIL_COND(main_material_index < 0 || main_material_index >= TG_Tree::MAX_MATERIALS);
+	ERR_FAIL_COND(cap_material_index < 0 || cap_material_index >= TG_Tree::MAX_MATERIALS);
 
 	int previous_ring_point_count = 0;
+
+	if (transforms.size() == 0) {
+		return;
+	}
 
 	// TODO Path shape
 	// TODO Path welding
 
-	for (size_t transform_index = 0; transform_index < transforms.size(); ++transform_index) {
-		const godot::Transform &trans = transforms[transform_index];
-		const float r = radii[transform_index];
-		const float circumference = static_cast<float>(Math_TAU) * r;
-		const int point_count = max(static_cast<int>(circumference * mesh_divisions_per_unit), 3);
-		//const int point_count = 8;
+	// Main path
+	{
+		TG_SurfaceData &surface = get_or_create_surface(surfaces, main_material_index);
 
-		for (int pi = 0; pi < point_count; ++pi) {
-			const float a = static_cast<float>(Math_TAU) * static_cast<float>(pi) / static_cast<float>(point_count);
-			const godot::Vector3 normal = trans.basis.x.rotated(trans.basis.y, a);
-			const godot::Vector3 pos = trans.origin + r * normal;
-			vertices.push_back(pos);
-			normals.push_back(normal);
-		}
+		const float base_circumference = static_cast<float>(Math_TAU) * radii[0];
+		const float uv_x_max = max(godot::Math::floor(base_circumference), 1.f) * uv_scale.x;
 
-		if (transform_index > 0) {
-			// Connect to previous ring
-			if (point_count == previous_ring_point_count) {
-				const int prev_ring_begin = static_cast<int>(vertices.size()) - 2 * point_count;
-				connect_rings_with_same_point_count(indices, prev_ring_begin, point_count);
+		const int base_point_count = max(static_cast<int>(base_circumference * mesh_divisions_per_unit), 3);
 
-			} else {
-				const int ring_begin = static_cast<int>(vertices.size()) - point_count;
-				const int prev_ring_begin = ring_begin - previous_ring_point_count;
-				connect_rings_with_different_point_count(indices,
-						prev_ring_begin, previous_ring_point_count,
-						ring_begin, point_count);
+		for (size_t transform_index = 0; transform_index < transforms.size(); ++transform_index) {
+			const godot::Transform &trans = transforms[transform_index];
+			const float radius = radii[transform_index];
+			const float circumference = static_cast<float>(Math_TAU) * radius;
+
+			const int point_count = constant_divisions ?
+											base_point_count :
+											max(static_cast<int>(circumference * mesh_divisions_per_unit), 3);
+
+			const float distance_along_path = distances[transform_index];
+
+			// Make ring
+			for (int pi = 0; pi < point_count; ++pi) {
+				const float ak = static_cast<float>(pi) / static_cast<float>(point_count);
+				const float angle = static_cast<float>(Math_TAU) * ak;
+
+				const godot::Vector3 normal = trans.basis.x.rotated(trans.basis.y, angle);
+				const godot::Vector3 pos = trans.origin + radius * normal;
+
+				const godot::Vector2 uv(ak * uv_x_max, distance_along_path * uv_scale.y);
+
+				const TG_Tangents t =
+						get_tangents_from_axes(normal, trans.basis.y, trans.basis.z.rotated(trans.basis.y, angle));
+
+				surface.positions.push_back(pos);
+				surface.normals.push_back(normal);
+				surface.tangents.push_back(t);
+				surface.uvs.push_back(uv);
 			}
-		}
 
-		previous_ring_point_count = point_count;
+			// Repeat last point, because it needs different UV.
+			// That means topologically, we are making strips, not rings
+			copy_range(surface, surface.positions.size() - point_count, 1);
+			surface.uvs.back().x = uv_x_max;
+
+			if (transform_index > 0) {
+				// Connect to previous ring
+				if (point_count == previous_ring_point_count) {
+					const int prev_ring_begin = static_cast<int>(surface.positions.size()) - 2 * (point_count + 1);
+					connect_strips_with_same_point_count(surface.indices, prev_ring_begin, point_count + 1);
+
+				} else {
+					const int ring_begin = static_cast<int>(surface.positions.size()) - point_count - 1;
+					const int prev_ring_begin = ring_begin - previous_ring_point_count - 1;
+					connect_strips_with_different_point_count(surface.indices,
+							prev_ring_begin, previous_ring_point_count + 1,
+							ring_begin, point_count + 1);
+				}
+			}
+
+			previous_ring_point_count = point_count;
+		}
 	}
 
-	add_cap(vertices, normals, indices, transforms.back(), previous_ring_point_count, end_cap_flat);
-	// TODO Tangents
-}
-
-template <typename T>
-void raw_append_to(std::vector<T> &dst, const std::vector<T> &src) {
-	const size_t begin_pos = dst.size();
-	dst.resize(dst.size() + src.size());
-	memcpy(dst.data() + begin_pos, src.data(), src.size() * sizeof(T));
+	// Cap
+	{
+		TG_SurfaceData &surface = get_or_create_surface(surfaces, cap_material_index);
+		TG_SurfaceData &base_surface = get_or_create_surface(surfaces, main_material_index);
+		add_cap(surface, base_surface, transforms.back(), previous_ring_point_count + 1, end_cap_flat, radii.back());
+	}
 }
 
 static void transform_positions(std::vector<godot::Vector3> &positions, size_t begin_index, size_t count,
@@ -309,6 +382,15 @@ static void transform_normals(std::vector<godot::Vector3> &normals, size_t begin
 	}
 }
 
+static void transform_tangents(std::vector<TG_Tangents> &tangents, size_t begin_index, size_t count,
+		const godot::Basis &basis) {
+
+	const size_t end = begin_index + count;
+	for (size_t i = begin_index; i < end; ++i) {
+		tangents[i].tangent = basis.xform(tangents[i].tangent);
+	}
+}
+
 static void offset_indices(std::vector<int> &indices, size_t begin_index, size_t count, int offset) {
 	const size_t end = begin_index + count;
 	for (size_t i = begin_index; i < end; ++i) {
@@ -316,44 +398,46 @@ static void offset_indices(std::vector<int> &indices, size_t begin_index, size_t
 	}
 }
 
-static void generate_mesh_surfaces(const TG_NodeInstance &node_instance,
+static void combine_mesh_surfaces(const TG_NodeInstance &node_instance,
 		std::vector<TG_SurfaceData> &surfaces_per_material, const godot::Transform &parent_transform) {
 
-	// TODO Consider materials
-	const int material_id = 0;
+	for (size_t surface_index = 0; surface_index < node_instance.surfaces.size(); ++surface_index) {
+		if (surface_index >= surfaces_per_material.size()) {
+			surfaces_per_material.resize(surface_index + 1);
+		}
 
-	if (material_id >= surfaces_per_material.size()) {
-		surfaces_per_material.resize(material_id + 1);
-	}
+		TG_SurfaceData &dst_surface = surfaces_per_material[surface_index];
+		const TG_SurfaceData &src_surface = node_instance.surfaces[surface_index];
 
-	TG_SurfaceData &dst_surface = surfaces_per_material[material_id];
-	const TG_SurfaceData &src_surface = node_instance.surface;
+		const godot::Transform transform = parent_transform * node_instance.local_transform;
 
-	const godot::Transform transform = parent_transform * node_instance.local_transform;
+		const size_t vertices_begin_index = dst_surface.positions.size();
+		const size_t vertices_count = src_surface.positions.size();
 
-	const size_t vertices_begin_index = dst_surface.positions.size();
-	const size_t vertices_count = src_surface.positions.size();
+		const size_t indices_begin_index = dst_surface.indices.size();
+		const size_t indices_count = src_surface.indices.size();
 
-	const size_t indices_begin_index = dst_surface.indices.size();
-	const size_t indices_count = src_surface.indices.size();
+		raw_append_to(dst_surface.positions, src_surface.positions);
+		raw_append_to(dst_surface.normals, src_surface.normals);
+		raw_append_to(dst_surface.uvs, src_surface.uvs);
+		raw_append_to(dst_surface.tangents, src_surface.tangents);
+		raw_append_to(dst_surface.indices, src_surface.indices);
 
-	raw_append_to(dst_surface.positions, src_surface.positions);
-	raw_append_to(dst_surface.normals, src_surface.normals);
-	raw_append_to(dst_surface.indices, src_surface.indices);
+		transform_positions(dst_surface.positions, vertices_begin_index, vertices_count, transform);
+		transform_normals(dst_surface.normals, vertices_begin_index, vertices_count, transform.basis);
+		transform_tangents(dst_surface.tangents, vertices_begin_index, vertices_count, transform.basis);
+		offset_indices(dst_surface.indices, indices_begin_index, indices_count, static_cast<int>(vertices_begin_index));
 
-	transform_positions(dst_surface.positions, vertices_begin_index, vertices_count, transform);
-	transform_normals(dst_surface.normals, vertices_begin_index, vertices_count, transform.basis);
-	offset_indices(dst_surface.indices, indices_begin_index, indices_count, static_cast<int>(vertices_begin_index));
-
-	for (size_t i = 0; i < node_instance.children.size(); ++i) {
-		generate_mesh_surfaces(**node_instance.children[i], surfaces_per_material, transform);
+		for (size_t i = 0; i < node_instance.children.size(); ++i) {
+			combine_mesh_surfaces(**node_instance.children[i], surfaces_per_material, transform);
+		}
 	}
 }
 
-static godot::Array generate_mesh_surfaces(const TG_NodeInstance &root_node_instance) {
+static godot::Array combine_mesh_surfaces(const TG_NodeInstance &root_node_instance) {
 	std::vector<TG_SurfaceData> surfaces;
 
-	generate_mesh_surfaces(root_node_instance, surfaces, root_node_instance.local_transform);
+	combine_mesh_surfaces(root_node_instance, surfaces, root_node_instance.local_transform);
 
 	godot::Array gd_surfaces;
 	gd_surfaces.resize(static_cast<int>(surfaces.size()));
@@ -364,6 +448,8 @@ static godot::Array generate_mesh_surfaces(const TG_NodeInstance &root_node_inst
 		gd_surface.resize(godot::Mesh::ARRAY_MAX);
 		gd_surface[godot::Mesh::ARRAY_VERTEX] = to_pool_array(src_surface.positions);
 		gd_surface[godot::Mesh::ARRAY_NORMAL] = to_pool_array(src_surface.normals);
+		gd_surface[godot::Mesh::ARRAY_TEX_UV] = to_pool_array(src_surface.uvs);
+		gd_surface[godot::Mesh::ARRAY_TANGENT] = to_pool_real_array_reinterpret(src_surface.tangents);
 		gd_surface[godot::Mesh::ARRAY_INDEX] = to_pool_array(src_surface.indices);
 		gd_surfaces[static_cast<int>(i)] = gd_surface;
 	}
@@ -400,6 +486,14 @@ void TG_Tree::set_branch_segments_per_unit(float b) {
 	_branch_segments_per_unit = b;
 }
 
+bool TG_Tree::get_constant_mesh_divisions() const {
+	return _constant_mesh_divisions;
+}
+
+void TG_Tree::set_constant_mesh_divisions(bool b) {
+	_constant_mesh_divisions = b;
+}
+
 godot::Ref<TG_Node> TG_Tree::get_root_node() const {
 	return _root_node;
 }
@@ -419,7 +513,7 @@ godot::Array TG_Tree::generate() {
 	rng.instance();
 	rng->set_seed(_global_seed + _root_node->get_local_seed());
 	process_node(**_root_node, **_root_instance, godot::Vector3(0, 1, 0), **rng);
-	godot::Array surfaces = generate_mesh_surfaces(**_root_instance);
+	godot::Array surfaces = combine_mesh_surfaces(**_root_instance);
 	return surfaces;
 }
 
@@ -537,6 +631,7 @@ void TG_Tree::generate_node_path(const TG_Node &node, TG_NodeInstance &node_inst
 
 	// Apply noise
 	if (path_params.noise_amplitude != 0.f) {
+		// TODO Add `noise_discrepancy` to make each branch bifurcate more diferently
 		godot::Ref<godot::OpenSimplexNoise> noise_x;
 		godot::Ref<godot::OpenSimplexNoise> noise_y;
 		godot::Ref<godot::OpenSimplexNoise> noise_z;
@@ -589,7 +684,9 @@ void TG_Tree::generate_node_path(const TG_Node &node, TG_NodeInstance &node_inst
 	// Recalculate orientations after modifiers
 	calc_orientations(path, segment_length);
 
-	generate_path_mesh(node_instance.surface, path, radii, _mesh_divisions_per_unit, path_params.end_cap_flat);
+	generate_path_mesh(node_instance.surfaces, path, radii, distances, _mesh_divisions_per_unit,
+			path_params.end_cap_flat, path_params.main_material_index, path_params.cap_material_index,
+			path_params.uv_scale, _constant_mesh_divisions);
 }
 
 void TG_Tree::generate_spawns(std::vector<SpawnInfo> &transforms, const TG_SpawnParams &params,
@@ -647,6 +744,9 @@ void TG_Tree::_register_methods() {
 
 	godot::register_method("get_branch_segments_per_unit", &TG_Tree::get_branch_segments_per_unit);
 	godot::register_method("set_branch_segments_per_unit", &TG_Tree::set_branch_segments_per_unit);
+
+	godot::register_method("get_constant_mesh_divisions", &TG_Tree::get_constant_mesh_divisions);
+	godot::register_method("set_constant_mesh_divisions", &TG_Tree::set_constant_mesh_divisions);
 
 	godot::register_method("get_root_node", &TG_Tree::get_root_node);
 	godot::register_method("set_root_node", &TG_Tree::set_root_node);

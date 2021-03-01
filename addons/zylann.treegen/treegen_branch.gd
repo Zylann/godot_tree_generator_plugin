@@ -20,6 +20,8 @@ const _properties = {
 	"path_noise_amplitude": 0,
 	"path_noise_curve": 0,
 	"path_seek_sun": 0,
+
+	"path_uv_scale": 0,
 	
 	"spawn_along_base_amount": 0,
 	"spawn_along_amount_per_unit": 0,
@@ -33,6 +35,9 @@ const _properties = {
 	"spawn_vertical_angle": 0,
 	"spawn_vertical_angle_jitter": 0
 }
+
+var _main_material : Material
+var _cap_material : Material
 
 
 func _init():
@@ -54,6 +59,18 @@ func _init():
 	curve.add_point(Vector2(1, 1))
 	curve.bake()
 	_set_resource(_data.get_path_params(), "radius_curve_along_parent", curve)
+
+
+func get_materials() -> Array:
+	return [_main_material, _cap_material]
+
+
+func assign_material_indexes(material_to_index: Dictionary):
+	var main_material_index : int = material_to_index[_main_material]
+	var cap_material_index : int = material_to_index[_cap_material]
+
+	_data.get_path_params().main_material_index = main_material_index
+	_data.get_path_params().cap_material_index = cap_material_index
 
 
 func _get_property_list() -> Array:
@@ -204,16 +221,16 @@ func _get_property_list() -> Array:
 			"type": TYPE_REAL,
 			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
 		},
-		#####################################################
-		{
-			"name": "Spawn Misc",
-			"type": TYPE_NIL,
-			"usage": PROPERTY_USAGE_GROUP
-		},
 		{
 			"name": "spawn_skip_probability",
 			"type": TYPE_REAL,
 			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
+		},
+		#####################################################
+		{
+			"name": "Spawn angle",
+			"type": TYPE_NIL,
+			"usage": PROPERTY_USAGE_GROUP
 		},
 		{
 			"name": "spawn_vertical_angle",
@@ -223,6 +240,31 @@ func _get_property_list() -> Array:
 		{
 			"name": "spawn_vertical_angle_jitter",
 			"type": TYPE_REAL,
+			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
+		},
+		#####################################################
+		{
+			"name": "Materials",
+			"type": TYPE_NIL,
+			"usage": PROPERTY_USAGE_GROUP
+		},
+		{
+			"name": "main_material",
+			"type": TYPE_OBJECT,
+			"hint": PROPERTY_HINT_RESOURCE_TYPE,
+			"hint_string": "Material",
+			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
+		},
+		{
+			"name": "cap_material",
+			"type": TYPE_OBJECT,
+			"hint": PROPERTY_HINT_RESOURCE_TYPE,
+			"hint_string": "Material",
+			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
+		},
+		{
+			"name": "path_uv_scale",
+			"type": TYPE_VECTOR2,
 			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_STORAGE
 		}
 	]
@@ -234,6 +276,12 @@ func _get(p_key: String):
 	
 	elif p_key == "end_cap_flat":
 		return _data.get_path_params().end_cap_flat
+
+	elif p_key == "main_material":
+		return _main_material
+
+	elif p_key == "cap_material":
+		return _cap_material
 
 	elif p_key.begins_with("path_"):
 		if p_key in _properties:
@@ -256,6 +304,16 @@ func _set(p_key: String, value):
 	
 	elif p_key == "end_cap_flat":
 		_data.get_path_params().end_cap_flat = value
+		_on_data_changed()
+		return true
+
+	elif p_key == "main_material":
+		_main_material = value
+		_on_data_changed()
+		return true
+
+	elif p_key == "cap_material":
+		_cap_material = value
 		_on_data_changed()
 		return true
 	
