@@ -489,10 +489,10 @@ static void generate_node_leaf(const TG_Node &node, TG_NodeInstance &node_instan
 	surface.normals.push_back(trans.basis.z);
 
 	// TODO Use an atlas?
-	surface.uvs.push_back(godot::Vector2(0.f, 0.f));
-	surface.uvs.push_back(godot::Vector2(1.f, 0.f));
-	surface.uvs.push_back(godot::Vector2(1.f, 1.f));
 	surface.uvs.push_back(godot::Vector2(0.f, 1.f));
+	surface.uvs.push_back(godot::Vector2(1.f, 1.f));
+	surface.uvs.push_back(godot::Vector2(1.f, 0.f));
+	surface.uvs.push_back(godot::Vector2(0.f, 0.f));
 
 	const TG_Tangents tangents = get_tangents_from_axes(trans.basis.z, trans.basis.y, trans.basis.x);
 	surface.tangents.push_back(tangents);
