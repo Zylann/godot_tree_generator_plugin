@@ -465,8 +465,8 @@ static void generate_node_leaf(const TG_Node &node, TG_NodeInstance &node_instan
 
 	// Let's start with a simple quad
 	// TODO Configurable params
-	const float width = 1.f;
-	const float height = 1.f;
+	const float width = 1.f * leaf_params.scale;
+	const float height = 1.f * leaf_params.scale;
 
 	//  3-------2
 	//  |     - |
