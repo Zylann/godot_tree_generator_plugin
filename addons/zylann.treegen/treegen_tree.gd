@@ -1,7 +1,13 @@
+# This is a wrapper for the tree generator, exposed as a scene node.
+# It is not really meant to be used in a game, but more as an editor helper to design the tree.
+# The generator is implemented with GDNative with more low-level classes.
+
 tool
 extends Spatial
 
 const TG_Tree = preload("./native/tg_tree.gdns")
+# TODO Cannot reliably use NativeScripts for type hinting yet
+# See 
 #const TG_Node = preload("./native/tg_node.gdns")
 #const TG_NodeInstance = preload("./native/tg_node_instance.gdns")
 const TreeGenNode = preload("./treegen_node.gd")
@@ -21,6 +27,7 @@ var _generator = TG_Tree.new()
 var _nodes = []
 var _parsing_scheduled = false
 var _materials = []
+var _generated_mesh : Mesh
 
 
 #func _ready():
@@ -75,6 +82,8 @@ func generate():
 		var material : Material = _materials[i]
 		mesh.surface_set_material(i, material)
 
+	_generated_mesh = mesh
+
 	var mi = MeshInstance.new()
 	mi.use_in_baked_light = true
 	mi.mesh = mesh
@@ -84,6 +93,10 @@ func generate():
 	var elapsed_mesh = OS.get_ticks_msec() - time_before
 	
 	print("Gen: ", elapsed_gen, ", mesh: ", elapsed_mesh)
+
+
+func get_generated_mesh() -> Mesh:
+	return _generated_mesh
 
 
 func schedule_parsing():
