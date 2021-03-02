@@ -5,6 +5,7 @@ A tool for generating 3D trees in Godot Engine, similarly to SpeedTree.
 
 WARNING: under development. Should be functional, but future versions may break compatibility.
 
+![Screenshot](https://user-images.githubusercontent.com/1311555/109704699-cffd7980-7b8e-11eb-9ca5-bb15b999923f.png)
 
 Installation
 --------------
