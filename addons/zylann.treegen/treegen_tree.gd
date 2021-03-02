@@ -7,7 +7,7 @@ extends Spatial
 
 const TG_Tree = preload("./native/tg_tree.gdns")
 # TODO Cannot reliably use NativeScripts for type hinting yet
-# See 
+# See https://github.com/godotengine/godot-cpp/issues/430
 #const TG_Node = preload("./native/tg_node.gdns")
 #const TG_NodeInstance = preload("./native/tg_node_instance.gdns")
 const TreeGenNode = preload("./treegen_node.gd")
@@ -92,7 +92,8 @@ func generate():
 
 	var elapsed_mesh = OS.get_ticks_msec() - time_before
 	
-	print("Gen: ", elapsed_gen, ", mesh: ", elapsed_mesh)
+	if OS.is_stdout_verbose():
+		print("TreeGen: gen: ", elapsed_gen, ", mesh: ", elapsed_mesh)
 
 
 func get_generated_mesh() -> Mesh:
